@@ -70,13 +70,22 @@ namespace ImGuiNET.SampleProgram.XNA
         /// </summary>
         public virtual unsafe void RebuildFontAtlas()
         {
-            // Get font texture from ImGui
+            // Get font texture from ImGui (Dear ImGui 1.92+ texture management API).
+            // The atlas is built lazily on the first NewFrame(); TexData must be non-null
+            // by the time this method is called.
             var io = ImGui.GetIO();
-            io.Fonts.GetTexDataAsRGBA32(out byte* pixelData, out int width, out int height, out int bytesPerPixel);
+            ImTextureData* texData = io.Fonts.NativePtr->TexData;
+
+            if (texData == null)
+                throw new InvalidOperationException("ImFontAtlas.TexData is null. Call ImGui.NewFrame() at least once before uploading the font texture.");
+
+            int width = texData->Width;
+            int height = texData->Height;
+            int bytesPerPixel = texData->BytesPerPixel;
 
             // Copy the data to a managed array
             var pixels = new byte[width * height * bytesPerPixel];
-            unsafe { Marshal.Copy(new IntPtr(pixelData), pixels, 0, pixels.Length); }
+            Marshal.Copy((IntPtr)texData->Pixels, pixels, 0, pixels.Length);
 
             // Create and register the texture as an XNA texture
             var tex2d = new Texture2D(_graphicsDevice, width, height, false, SurfaceFormat.Color);
@@ -89,8 +98,8 @@ namespace ImGuiNET.SampleProgram.XNA
             _fontTextureId = BindTexture(tex2d);
 
             // Let ImGui know where to find the texture
-            io.Fonts.SetTexID(_fontTextureId.Value);
-            io.Fonts.ClearTexData(); // Clears CPU side texture data
+            texData->TexID = _fontTextureId.Value;
+            texData->Status = ImTextureStatus.OK;
         }
 
         /// <summary>
@@ -395,9 +404,9 @@ namespace ImGuiNET.SampleProgram.XNA
                         continue;
                     }
 
-                    if (!_loadedTextures.ContainsKey(drawCmd.TextureId))
+                    if (!_loadedTextures.ContainsKey(drawCmd.TexRef._TexID))
                     {
-                        throw new InvalidOperationException($"Could not find a texture with id '{drawCmd.TextureId}', please check your bindings");
+                        throw new InvalidOperationException($"Could not find a texture with id '{drawCmd.TexRef._TexID}', please check your bindings");
                     }
 
                     _graphicsDevice.ScissorRectangle = new Rectangle(
@@ -407,7 +416,7 @@ namespace ImGuiNET.SampleProgram.XNA
                         (int)(drawCmd.ClipRect.W - drawCmd.ClipRect.Y)
                     );
 
-                    var effect = UpdateEffect(_loadedTextures[drawCmd.TextureId]);
+                    var effect = UpdateEffect(_loadedTextures[drawCmd.TexRef._TexID]);
 
                     foreach (var pass in effect.CurrentTechnique.Passes)
                     {

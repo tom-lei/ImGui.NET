@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>An unofficial fork of ImGui.NET that tracks recent Dear ImGui releases and exposes newer ImGui APIs for .NET. Not affiliated with or maintained by the original ImGui.NET maintainers.</Description>
-    <AssemblyVersion>1.91.6.1</AssemblyVersion>
+    <AssemblyVersion>1.92.7.1</AssemblyVersion>
     <Authors>Tom Lei and ImGui.NET contributors</Authors>
     <TargetFrameworks>netstandard2.0;net6.0;net8.0</TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

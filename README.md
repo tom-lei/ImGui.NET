@@ -15,15 +15,37 @@ dotnet add package TomLei.ImGui.NET
 
 ---
 
+## Dear ImGui Version
+
+This fork currently targets **Dear ImGui 1.92.7** (cimgui bindings regenerated from the 1.92.7 definitions).
+
+### What's new in 1.92.x
+
+Dear ImGui 1.92.x includes a significant rework of the font/texture atlas system:
+
+- **New embedded/vector font support** — `ImFontAtlas` now supports pluggable font loaders (`ImFontLoader`) and vector/SVG fonts via `AddFontDefaultVector()`.
+- **New texture management** — `ImTextureData`, `ImTextureRef`, `ImTextureRect`, `ImTextureFormat`, `ImTextureStatus` replace the old `GetTexDataAsRGBA32`/`GetTexDataAsAlpha8` API.
+- **`ImFontAtlasRect`** replaces `ImFontAtlasCustomRect`.
+- **`ImFontBaked`** exposes per-size baked font data.
+- **`ImFontFlags`** — new per-font configuration flags (`NoLoadError`, `NoLoadGlyphs`, `LockBakedSizes`).
+- **`ImGuiFreeTypeLoaderFlags`** — flags for the built-in FreeType font loader.
+- **`ImGuiListClipperFlags`** — new flags for `ImGuiListClipper`.
+- New `ImDrawTextFlags` enum for internal draw-text control.
+- Various additions to `ImGuiIO`, `ImGuiStyle`, tables, multi-select, and platform APIs.
+
+### Migration notes from 1.91.x
+
+- `ImFontAtlasCustomRect` has been removed; use `ImFontAtlasRect` instead.
+- `ImFontAtlas.GetTexDataAsAlpha8` / `GetTexDataAsRGBA32` are gone; use the new `ImTextureData`/`ImTextureRef` workflow.
+- `ImGuiFreeTypeBuilderFlags` is now `ImGuiFreeTypeLoaderFlags`.
+
+---
+
 This is a .NET wrapper for the immediate mode GUI library, Dear ImGui (https://github.com/ocornut/imgui). ImGui.NET lets you build graphical interfaces using a simple immediate-mode style. ImGui.NET is a .NET Standard library, and can be used on all major .NET runtimes and operating systems.
 
 Included is a basic sample program that shows how to use the library, and renders the UI using [Veldrid](https://github.com/veldrid/veldrid), a portable graphics library for .NET. By itself, Dear ImGui does not care what technology you use for rendering; it simply outputs textured triangles. Example renderers also exist for MonoGame and OpenTK (OpenGL).
 
 This wrapper is built on top of [cimgui](https://github.com/cimgui/cimgui), which exposes a plain C API for Dear ImGui. If you are using Windows, OSX, or a mainline Linux distribution, then the ImGui.NET NuGet package comes bundled with a pre-built native library. If you are using another operating system, then you may need to build the native library yourself; see the cimgui repo for build instructions.
-
-[![NuGet](https://img.shields.io/nuget/v/ImGui.NET.svg)](https://www.nuget.org/packages/ImGui.NET)
-
-___As of February 2023, I (@mellinoe) am no longer able to publicly share updates to ImGui.NET and related libraries. A big thanks to @zaafar who continues to actively maintain the library and keep it up to date with new versions of native Dear ImGui. Feel free to join the [Discord server](https://discord.gg/s5EvvWJ) for more information about the current status of development.___
 
 # Building
 
@@ -79,8 +101,8 @@ This fork publishes under the NuGet package ID **`TomLei.ImGui.NET`**.
 Publishing to nuget.org happens automatically when you push a version tag matching `v*`:
 
 ```bash
-git tag v1.91.6.1
-git push origin v1.91.6.1
+git tag v1.92.7.1
+git push origin v1.92.7.1
 ```
 
 The GitHub Actions CI workflow will then:
