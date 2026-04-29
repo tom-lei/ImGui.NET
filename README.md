@@ -1,4 +1,19 @@
-# ImGui.NET
+# TomLei.ImGui.NET
+
+> **Unofficial fork** — This is an unofficial fork of [ImGui.NET](https://github.com/ImGuiNET/ImGui.NET) intended to track recent [Dear ImGui](https://github.com/ocornut/imgui) releases and expose newer ImGui APIs for .NET. It is not affiliated with or maintained by the original ImGui.NET maintainers.
+
+**NuGet package ID: `TomLei.ImGui.NET`**
+
+[![NuGet](https://img.shields.io/nuget/v/TomLei.ImGui.NET.svg)](https://www.nuget.org/packages/TomLei.ImGui.NET)
+[![CI](https://github.com/tom-lei/ImGui.NET/actions/workflows/build.yml/badge.svg)](https://github.com/tom-lei/ImGui.NET/actions/workflows/build.yml)
+
+Install via NuGet:
+
+```
+dotnet add package TomLei.ImGui.NET
+```
+
+---
 
 This is a .NET wrapper for the immediate mode GUI library, Dear ImGui (https://github.com/ocornut/imgui). ImGui.NET lets you build graphical interfaces using a simple immediate-mode style. ImGui.NET is a .NET Standard library, and can be used on all major .NET runtimes and operating systems.
 
@@ -40,3 +55,46 @@ See the [official screenshot thread](https://github.com/ocornut/imgui/issues/123
 
 https://github.com/cimgui/cimgui
 > This is a thin c-api wrapper for the excellent C++ intermediate gui imgui. This library is intended as a intermediate layer to be able to use imgui from other languages that can interface with C .
+
+# Publishing (Fork Maintainer Guide)
+
+## Package Identity
+
+This fork publishes under the NuGet package ID **`TomLei.ImGui.NET`**.
+
+## Configuring the `NUGET_API_KEY` Secret
+
+1. Log in to [nuget.org](https://www.nuget.org/) and go to **Account settings → API Keys**.
+2. Create a new key:
+   - **Key name:** `TomLei.ImGui.NET GitHub Actions`
+   - **Scopes:** `Push new packages and package versions`
+   - **Glob pattern:** `TomLei.ImGui.NET*`
+3. Copy the generated key once.
+4. In the GitHub repository, go to **Settings → Secrets and variables → Actions → New repository secret**:
+   - **Name:** `NUGET_API_KEY`
+   - **Value:** *(paste your NuGet API key)*
+
+## Triggering a Package Publish
+
+Publishing to nuget.org happens automatically when you push a version tag matching `v*`:
+
+```bash
+git tag v1.91.6.1
+git push origin v1.91.6.1
+```
+
+The GitHub Actions CI workflow will then:
+1. Restore and build the solution.
+2. Pack the NuGet package.
+3. Upload the `.nupkg` as a workflow artifact.
+4. Publish to [nuget.org](https://www.nuget.org/) using the `NUGET_API_KEY` secret.
+
+## Inspecting CI-Generated Artifacts Before Publishing
+
+Every CI run (including branch pushes and pull requests) uploads the packed `.nupkg` file as a workflow artifact named **`nuget-packages`**. To inspect a package before it is published:
+
+1. Go to the [Actions tab](https://github.com/tom-lei/ImGui.NET/actions) of this repository.
+2. Open the workflow run you want to inspect.
+3. Download the **`nuget-packages`** artifact from the **Artifacts** section.
+4. Inspect the `.nupkg` file (it is a ZIP archive) to verify contents before publishing.
+

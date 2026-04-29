@@ -1,20 +1,30 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>A .NET wrapper for the Dear ImGui library.</Description>
+    <Description>An unofficial fork of ImGui.NET that tracks recent Dear ImGui releases and exposes newer ImGui APIs for .NET. Not affiliated with or maintained by the original ImGui.NET maintainers.</Description>
     <AssemblyVersion>1.91.6.1</AssemblyVersion>
-    <Authors>Eric Mellino</Authors>
+    <Authors>Tom Lei and ImGui.NET contributors</Authors>
     <TargetFrameworks>netstandard2.0;net6.0;net8.0</TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DebugType>portable</DebugType>
     <AssemblyName>ImGui.NET</AssemblyName>
-    <PackageId>ImGui.NET</PackageId>
+    <PackageId>TomLei.ImGui.NET</PackageId>
     <PackagePrereleaseIdentifier></PackagePrereleaseIdentifier>
     <PackageVersion>$(AssemblyVersion)$(PackagePrereleaseIdentifier)</PackageVersion>
-    <PackageTags>ImGui ImGui.NET Immediate Mode GUI</PackageTags>
-    <PackageProjectUrl>https://github.com/mellinoe/imgui.net</PackageProjectUrl>
+    <PackageTags>ImGui ImGui.NET Dear-ImGui Immediate-Mode GUI fork</PackageTags>
+    <PackageProjectUrl>https://github.com/tom-lei/ImGui.NET</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/tom-lei/ImGui.NET</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <DocumentationFile Condition="'$(Configuration)' == 'Release'">$(OutputPath)\ImGui.NET.xml</DocumentationFile>
     <RootNamespace>ImGuiNET</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\..\README.md">
+      <Pack>true</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
