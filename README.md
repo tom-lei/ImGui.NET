@@ -45,7 +45,15 @@ This is a .NET wrapper for the immediate mode GUI library, Dear ImGui (https://g
 
 Included is a basic sample program that shows how to use the library, and renders the UI using [Veldrid](https://github.com/veldrid/veldrid), a portable graphics library for .NET. By itself, Dear ImGui does not care what technology you use for rendering; it simply outputs textured triangles. Example renderers also exist for MonoGame and OpenTK (OpenGL).
 
-This wrapper is built on top of [cimgui](https://github.com/cimgui/cimgui), which exposes a plain C API for Dear ImGui. If you are using Windows, OSX, or a mainline Linux distribution, then the ImGui.NET NuGet package comes bundled with a pre-built native library. If you are using another operating system, then you may need to build the native library yourself; see the cimgui repo for build instructions.
+This wrapper is built on top of [cimgui](https://github.com/cimgui/cimgui), which exposes a plain C API for Dear ImGui. CI builds and packs native binaries into the NuGet package for these runtime identifiers:
+
+- `win-x86`
+- `win-x64`
+- `win-arm64`
+- `linux-x64`
+- `linux-arm64`
+- `osx-x64`
+- `osx-arm64`
 
 # Building
 
@@ -106,10 +114,12 @@ git push origin v1.92.7.1
 ```
 
 The GitHub Actions CI workflow will then:
-1. Restore and build the solution.
-2. Pack the NuGet package.
-3. Upload the `.nupkg` as a workflow artifact.
-4. Publish to [nuget.org](https://www.nuget.org/) using the `NUGET_API_KEY` secret.
+1. Build native `cimgui` binaries in a RID matrix.
+2. Collect those native artifacts into `deps/cimgui/<rid>/`.
+3. Restore and build the solution.
+4. Pack one NuGet package containing all RID native assets.
+5. Upload the `.nupkg` as a workflow artifact.
+6. Publish to [nuget.org](https://www.nuget.org/) using the `NUGET_API_KEY` secret.
 
 ## Inspecting CI-Generated Artifacts Before Publishing
 
@@ -119,4 +129,3 @@ Every CI run (including branch pushes and pull requests) uploads the packed `.nu
 2. Open the workflow run you want to inspect.
 3. Download the **`nuget-packages`** artifact from the **Artifacts** section.
 4. Inspect the `.nupkg` file (it is a ZIP archive) to verify contents before publishing.
-
