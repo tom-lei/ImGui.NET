@@ -29,8 +29,12 @@ namespace ImGuiNET
         private static bool _showImGuiDemoWindow = true;
         private static bool _showAnotherWindow = false;
         private static bool _showMemoryEditor = false;
+        private static bool _showNewFeaturesWindow = true;
         private static byte[] _memoryEditorData;
+        private static int _fontAtlasButtonClicks = 0;
+        private static int _clipperPinnedIndex = 42;
         private static uint s_tab_bar_flags = (uint)ImGuiTabBarFlags.Reorderable;
+        private static ImGuiListClipperFlags s_clipperFlags = ImGuiListClipperFlags.None;
         static bool[] s_opened = { true, true, true, true }; // Persistent user state
 
         static void SetThing(out float i, float val) { i = val; }
@@ -102,6 +106,7 @@ namespace ImGuiNET
                 ImGui.Checkbox("ImGui Demo Window", ref _showImGuiDemoWindow);                 // Edit bools storing our windows open/close state
                 ImGui.Checkbox("Another Window", ref _showAnotherWindow);
                 ImGui.Checkbox("Memory Editor", ref _showMemoryEditor);
+                ImGui.Checkbox("Dear ImGui 1.92 Samples", ref _showNewFeaturesWindow);
                 if (ImGui.Button("Button"))                                         // Buttons return true when clicked (NB: most widgets return true when edited/activated)
                     _counter++;
                 ImGui.SameLine(0, -1);
@@ -130,6 +135,14 @@ namespace ImGuiNET
                 // Here we just want to make the demo initial state a bit more friendly!
                 ImGui.SetNextWindowPos(new Vector2(650, 20), ImGuiCond.FirstUseEver);
                 ImGui.ShowDemoWindow(ref _showImGuiDemoWindow);
+            }
+
+            if (_showNewFeaturesWindow)
+            {
+                ImGui.SetNextWindowSize(new Vector2(520, 560), ImGuiCond.FirstUseEver);
+                ImGui.Begin("Dear ImGui 1.92 Samples", ref _showNewFeaturesWindow);
+                SubmitNewFeatureSamples();
+                ImGui.End();
             }
             
             if (ImGui.TreeNode("Tabs"))
@@ -231,6 +244,92 @@ namespace ImGuiNET
             ImGui.GetWindowDrawList().AddText(ImGui.GetCursorScreenPos(), uint.MaxValue, $"{ImGui.CalcTextSize("h")}");
             ImGui.NewLine();
             ImGui.TextUnformatted("TextUnformatted now passes end ptr but isn't cut off");
+        }
+
+        private static unsafe void SubmitNewFeatureSamples()
+        {
+            ImGui.TextWrapped("Focused demonstrations for the newer texture/font and list clipper APIs surfaced by this fork.");
+            ImGui.Separator();
+
+            ImGui.Text("Font atlas / ImTextureData");
+            ImTextureDataPtr fontTexData = ImGui.GetIO().Fonts.TexData;
+            if (fontTexData.NativePtr == null)
+            {
+                ImGui.TextUnformatted("Font atlas texture data is not available yet.");
+            }
+            else
+            {
+                ImGui.Text($"Status: {fontTexData.Status}");
+                ImGui.Text($"Size: {fontTexData.Width} x {fontTexData.Height} ({fontTexData.BytesPerPixel} bytes/pixel)");
+                ImGui.Text($"UniqueId: {fontTexData.UniqueID} | RefCount: {fontTexData.RefCount}");
+                ImGui.Text($"TextureId: 0x{fontTexData.GetTexID().ToInt64():X}");
+
+                ImTextureRef fontTexRef = fontTexData.GetTexRef();
+                Vector2 previewSize = new Vector2(256, MathF.Max(96f, 256f * fontTexData.Height / (float)fontTexData.Width));
+                ImGui.Image(fontTexRef, previewSize);
+                ImGui.SameLine();
+                ImGui.BeginGroup();
+                ImGui.ImageWithBg(fontTexRef, new Vector2(128, 96), Vector2.Zero, new Vector2(0.35f, 0.35f), new Vector4(0.1f, 0.1f, 0.1f, 1f), Vector4.One);
+                if (ImGui.ImageButton("Font Atlas Button", fontTexRef, new Vector2(128, 32)))
+                {
+                    _fontAtlasButtonClicks++;
+                }
+                ImGui.Text($"ImageButton clicks: {_fontAtlasButtonClicks}");
+                ImGui.EndGroup();
+            }
+
+            ImGui.Separator();
+            ImGui.Text("ImGuiListClipper");
+            ImGui.SliderInt("Pinned row", ref _clipperPinnedIndex, 0, 199);
+            bool noSetTableRowCounters = (s_clipperFlags & ImGuiListClipperFlags.NoSetTableRowCounters) != 0;
+            if (ImGui.Checkbox("NoSetTableRowCounters", ref noSetTableRowCounters))
+            {
+                s_clipperFlags = noSetTableRowCounters ? ImGuiListClipperFlags.NoSetTableRowCounters : ImGuiListClipperFlags.None;
+            }
+
+            if (ImGui.BeginChild("Clipper Demo", new Vector2(0, 220), ImGuiChildFlags.Borders))
+            {
+                ImGuiListClipper* nativeClipper = ImGuiListClipper_ImGuiListClipper();
+                if (nativeClipper == null)
+                {
+                    ImGui.TextUnformatted("Failed to allocate ImGuiListClipper.");
+                }
+                else
+                {
+                    try
+                    {
+                        ImGuiListClipperPtr clipper = nativeClipper;
+                        clipper.Flags = s_clipperFlags;
+                        clipper.Begin(200, ImGui.GetTextLineHeightWithSpacing());
+                        clipper.IncludeItemByIndex(_clipperPinnedIndex);
+                        while (clipper.Step())
+                        {
+                            for (int item = clipper.DisplayStart; item < clipper.DisplayEnd; item++)
+                            {
+                                bool isPinned = item == _clipperPinnedIndex;
+                                if (isPinned)
+                                {
+                                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.85f, 0.35f, 1f));
+                                }
+
+                                ImGui.Selectable($"Item {item:000}  | visible range {clipper.DisplayStart:000}-{clipper.DisplayEnd - 1:000}", isPinned);
+
+                                if (isPinned)
+                                {
+                                    ImGui.PopStyleColor();
+                                }
+                            }
+                        }
+                        clipper.End();
+                    }
+                    finally
+                    {
+                        ImGuiListClipper_destroy(nativeClipper);
+                    }
+                }
+
+                ImGui.EndChild();
+            }
         }
     }
 }
