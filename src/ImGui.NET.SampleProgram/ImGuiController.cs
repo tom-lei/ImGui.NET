@@ -59,7 +59,10 @@ namespace ImGuiNET
             _windowWidth = width;
             _windowHeight = height;
 
-            ImGui.CreateContext();
+            if (ImGui.GetCurrentContext() == IntPtr.Zero)
+            {
+                ImGui.CreateContext();
+            }
             var io = ImGui.GetIO();
             io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;
             io.ConfigFlags |= ImGuiConfigFlags.NavEnableKeyboard |

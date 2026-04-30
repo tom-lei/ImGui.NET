@@ -30,6 +30,7 @@ namespace ImGuiNET.SampleProgram.XNA
         protected override void Initialize()
         {
             _imGuiRenderer = new ImGuiRenderer(this);
+            InitializeSampleFonts();
             _imGuiRenderer.RebuildFontAtlas();
 
             base.Initialize();
@@ -77,6 +78,8 @@ namespace ImGuiNET.SampleProgram.XNA
         private Num.Vector3 clear_color = new Num.Vector3(114f / 255f, 144f / 255f, 154f / 255f);
         private byte[] _textBuffer = new byte[100];
         private int _textureButtonClicks = 0;
+        private float _vectorFontPreviewSize = 18f;
+        private ImFontPtr _vectorFont;
 
         protected virtual void ImGuiLayout()
         {
@@ -131,7 +134,7 @@ namespace ImGuiNET.SampleProgram.XNA
 
         private unsafe void SubmitNewFeatureSamples()
         {
-            ImGui.TextWrapped("This XNA/FNA sample demonstrates the newer ImTextureRef- and ImTextureData-based APIs.");
+            ImGui.TextWrapped("This XNA/FNA sample demonstrates the newer ImTextureRef-, ImTextureData-, and included vector font APIs.");
             ImGui.Separator();
 
             ImTextureDataPtr fontTexData = ImGui.GetIO().Fonts.TexData;
@@ -149,6 +152,33 @@ namespace ImGuiNET.SampleProgram.XNA
             float height = Math.Max(72f, 240f * fontTexData.Height / (float)fontTexData.Width);
             ImGui.Image(fontAtlasRef, new Num.Vector2(240, height));
             ImGui.TextUnformatted("The preview above is sourced from ImGui.GetIO().Fonts.TexData.GetTexRef().");
+
+            ImGui.Separator();
+            ImGui.Text("Included vector font");
+            if (_vectorFont.NativePtr == null)
+            {
+                ImGui.TextUnformatted("The included vector font is not available.");
+                return;
+            }
+
+            ImGui.Text($"Debug name: {_vectorFont.GetDebugName()}");
+            ImGui.Text($"Loaded: {_vectorFont.IsLoaded()} | LegacySize: {_vectorFont.LegacySize:0.##}");
+            ImGui.SliderFloat("Vector preview size", ref _vectorFontPreviewSize, 10f, 48f, "%.0f px");
+            ImFontBakedPtr baked = _vectorFont.GetFontBaked(_vectorFontPreviewSize);
+            if (baked.NativePtr != null)
+            {
+                ImGui.Text($"Baked size: {baked.Size:0.##} | Surface: {baked.MetricsTotalSurface}");
+            }
+
+            ImGui.PushFont(_vectorFont, _vectorFontPreviewSize);
+            ImGui.Text("The quick brown fox jumps over 13 lazy dogs.");
+            ImGui.Text("Vector font sample: 0123456789 +-*/ [] {} ()");
+            ImGui.PopFont();
+        }
+
+        private void InitializeSampleFonts()
+        {
+            _vectorFont = ImGui.GetIO().Fonts.AddFontDefaultVector();
         }
 
 		public static Texture2D CreateTexture(GraphicsDevice device, int width, int height, Func<int, Color> paint)

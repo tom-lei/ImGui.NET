@@ -33,6 +33,8 @@ namespace ImGuiNET
         private static byte[] _memoryEditorData;
         private static int _fontAtlasButtonClicks = 0;
         private static int _clipperPinnedIndex = 42;
+        private static float _vectorFontPreviewSize = 18f;
+        private static ImFontPtr _vectorFont;
         private static uint s_tab_bar_flags = (uint)ImGuiTabBarFlags.Reorderable;
         private static ImGuiListClipperFlags s_clipperFlags = ImGuiListClipperFlags.None;
         static bool[] s_opened = { true, true, true, true }; // Persistent user state
@@ -53,6 +55,7 @@ namespace ImGuiNET
                 _controller.WindowResized(_window.Width, _window.Height);
             };
             _cl = _gd.ResourceFactory.CreateCommandList();
+            InitializeSampleFonts();
             _controller = new ImGuiController(_gd, _gd.MainSwapchain.Framebuffer.OutputDescription, _window.Width, _window.Height);
             // _memoryEditor = new MemoryEditor();
             Random random = new Random();
@@ -246,9 +249,19 @@ namespace ImGuiNET
             ImGui.TextUnformatted("TextUnformatted now passes end ptr but isn't cut off");
         }
 
+        private static void InitializeSampleFonts()
+        {
+            if (ImGui.GetCurrentContext() == IntPtr.Zero)
+            {
+                ImGui.CreateContext();
+            }
+
+            _vectorFont = ImGui.GetIO().Fonts.AddFontDefaultVector();
+        }
+
         private static unsafe void SubmitNewFeatureSamples()
         {
-            ImGui.TextWrapped("Focused demonstrations for the newer texture/font and list clipper APIs surfaced by this fork.");
+            ImGui.TextWrapped("Focused demonstrations for the newer texture/font, vector font, and list clipper APIs surfaced by this fork.");
             ImGui.Separator();
 
             ImGui.Text("Font atlas / ImTextureData");
@@ -276,6 +289,37 @@ namespace ImGuiNET
                 }
                 ImGui.Text($"ImageButton clicks: {_fontAtlasButtonClicks}");
                 ImGui.EndGroup();
+            }
+
+            ImGui.Separator();
+            ImGui.Text("Included vector font");
+            if (_vectorFont.NativePtr == null)
+            {
+                ImGui.TextUnformatted("The included vector font is not available.");
+            }
+            else
+            {
+                ImGui.Text($"Debug name: {_vectorFont.GetDebugName()}");
+                ImGui.Text($"Loaded: {_vectorFont.IsLoaded()} | LegacySize: {_vectorFont.LegacySize:0.##}");
+                ImGui.SliderFloat("Vector preview size", ref _vectorFontPreviewSize, 10f, 48f, "%.0f px");
+                ImFontBakedPtr baked = _vectorFont.GetFontBaked(_vectorFontPreviewSize);
+                if (baked.NativePtr != null)
+                {
+                    ImGui.Text($"Baked size: {baked.Size:0.##} | Surface: {baked.MetricsTotalSurface} | Ascent/Descent: {baked.Ascent:0.##}/{baked.Descent:0.##}");
+                }
+
+                ImGui.PushFont(_vectorFont, _vectorFontPreviewSize);
+                ImGui.Text("The quick brown fox jumps over 13 lazy dogs.");
+                ImGui.Text("Vector font sample: 0123456789 +-*/ [] {} ()");
+                ImGui.PopFont();
+
+                ImGui.TextUnformatted("Same included vector font, reused at multiple sizes:");
+                foreach (float size in new[] { 13f, 20f, 32f })
+                {
+                    ImGui.PushFont(_vectorFont, size);
+                    ImGui.Text($"[{size:0}px] Sphinx of black quartz, judge my vow.");
+                    ImGui.PopFont();
+                }
             }
 
             ImGui.Separator();
