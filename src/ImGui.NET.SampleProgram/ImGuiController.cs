@@ -59,12 +59,22 @@ namespace ImGuiNET
             _windowWidth = width;
             _windowHeight = height;
 
-            ImGui.CreateContext();
+            if (ImGui.GetCurrentContext() == IntPtr.Zero)
+            {
+                ImGui.CreateContext();
+            }
             var io = ImGui.GetIO();
             io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;
             io.ConfigFlags |= ImGuiConfigFlags.NavEnableKeyboard |
                 ImGuiConfigFlags.DockingEnable;
             io.Fonts.Flags |= ImFontAtlasFlags.NoBakedLines;
+
+            // In Dear ImGui 1.92+, the font atlas is built lazily on the first NewFrame().
+            // Call NewFrame()/EndFrame() once now so that TexData is populated before we
+            // upload it to the GPU.
+            SetPerFrameImGuiData(1f / 60f);
+            ImGui.NewFrame();
+            ImGui.EndFrame();
 
             CreateDeviceResources(gd, outputDescription);
             SetPerFrameImGuiData(1f / 60f);
@@ -244,15 +254,22 @@ namespace ImGuiNET
         /// <summary>
         /// Recreates the device texture used to render text.
         /// </summary>
-        public void RecreateFontDeviceTexture(GraphicsDevice gd)
+        public unsafe void RecreateFontDeviceTexture(GraphicsDevice gd)
         {
             ImGuiIOPtr io = ImGui.GetIO();
-            // Build
-            IntPtr pixels;
-            int width, height, bytesPerPixel;
-            io.Fonts.GetTexDataAsRGBA32(out pixels, out width, out height, out bytesPerPixel);
-            // Store our identifier
-            io.Fonts.SetTexID(_fontAtlasID);
+
+            // In Dear ImGui 1.92+, texture data is managed via ImTextureData.
+            // The atlas is built on the first NewFrame(); TexData must be non-null by the
+            // time this method is called (see constructor for the required ordering).
+            ImTextureData* texData = io.Fonts.NativePtr->TexData;
+
+            if (texData == null)
+                throw new InvalidOperationException("ImFontAtlas.TexData is null. Call ImGui.NewFrame() at least once before uploading the font texture.");
+
+            int width = texData->Width;
+            int height = texData->Height;
+            int bytesPerPixel = texData->BytesPerPixel;
+            IntPtr pixels = (IntPtr)texData->Pixels;
 
             _fontTexture = gd.ResourceFactory.CreateTexture(TextureDescription.Texture2D(
                 (uint)width,
@@ -276,7 +293,9 @@ namespace ImGuiNET
                 0);
             _fontTextureView = gd.ResourceFactory.CreateTextureView(_fontTexture);
 
-            io.Fonts.ClearTexData();
+            // Notify ImGui that the texture has been uploaded.
+            texData->TexID = _fontAtlasID;
+            texData->Status = ImTextureStatus.OK;
         }
 
         /// <summary>
@@ -491,15 +510,17 @@ namespace ImGuiNET
                     }
                     else
                     {
-                        if (pcmd.TextureId != IntPtr.Zero)
+                        // In Dear ImGui 1.92+, TextureId is now TexRef._TexID.
+                        IntPtr texId = pcmd.TexRef._TexID;
+                        if (texId != IntPtr.Zero)
                         {
-                            if (pcmd.TextureId == _fontAtlasID)
+                            if (texId == _fontAtlasID)
                             {
                                 cl.SetGraphicsResourceSet(1, _fontTextureResourceSet);
                             }
                             else
                             {
-                                cl.SetGraphicsResourceSet(1, GetImageResourceSet(pcmd.TextureId));
+                                cl.SetGraphicsResourceSet(1, GetImageResourceSet(texId));
                             }
                         }
 

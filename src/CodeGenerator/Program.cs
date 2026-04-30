@@ -179,9 +179,14 @@ namespace CodeGenerator
                                 vectorElementType = wellKnown;
                             }
 
+                            // When the field is a pointer to an ImVector (e.g. ImVector*), dereference it.
+                            string fieldAccess = typeStr.EndsWith("*")
+                                ? $"(*NativePtr->{field.Name})"
+                                : $"NativePtr->{field.Name}";
+
                             if (GetWrappedType(vectorElementType + "*", out string wrappedElementType))
                             {
-                                writer.WriteLine($"public ImPtrVector<{wrappedElementType}> {field.Name} => new ImPtrVector<{wrappedElementType}>(NativePtr->{field.Name}, Unsafe.SizeOf<{vectorElementType}>());");
+                                writer.WriteLine($"public ImPtrVector<{wrappedElementType}> {field.Name} => new ImPtrVector<{wrappedElementType}>({fieldAccess}, Unsafe.SizeOf<{vectorElementType}>());");
                             }
                             else
                             {
@@ -189,7 +194,7 @@ namespace CodeGenerator
                                 {
                                     vectorElementType = wrappedElementType;
                                 }
-                                writer.WriteLine($"public ImVector<{vectorElementType}> {field.Name} => new ImVector<{vectorElementType}>(NativePtr->{field.Name});");
+                                writer.WriteLine($"public ImVector<{vectorElementType}> {field.Name} => new ImVector<{vectorElementType}>({fieldAccess});");
                             }
                         }
                         else
@@ -743,7 +748,17 @@ namespace CodeGenerator
                 if (mp.IsPinned)
                 {
                     string nativePinType = GetTypeString(tr.Type, false);
-                    writer.PushBlock($"fixed ({nativePinType} native_{tr.Name} = &{mp.PinTarget})");
+                    if (nativePinType == "IntPtr")
+                    {
+                        // IntPtr is already a pointer-sized value; just copy it, no pinning needed.
+                        writer.WriteLine($"IntPtr native_{tr.Name} = {mp.PinTarget};");
+                        mp.UsesFixedBlock = false;
+                    }
+                    else
+                    {
+                        writer.PushBlock($"fixed ({nativePinType} native_{tr.Name} = &{mp.PinTarget})");
+                        mp.UsesFixedBlock = true;
+                    }
                 }
 
                 nativeInvocationArgs.Add(mp.VarName);
@@ -797,7 +812,7 @@ namespace CodeGenerator
             {
                 MarshalledParameter mp = marshalledParameters[i];
                 if (mp == null) { continue; }
-                if (mp.IsPinned)
+                if (mp.IsPinned && mp.UsesFixedBlock)
                 {
                     writer.PopBlock();
                 }
@@ -940,6 +955,11 @@ namespace CodeGenerator
 
         public string MarshalledType { get; }
         public bool IsPinned { get; }
+        /// <summary>
+        /// When true, a fixed() block was pushed for this parameter and must be popped.
+        /// False when IsPinned is true but the native type is IntPtr (no fixed block needed).
+        /// </summary>
+        public bool UsesFixedBlock { get; internal set; }
         public string VarName { get; }
         public bool HasDefaultValue { get; }
         public string PinTarget { get; internal set; }

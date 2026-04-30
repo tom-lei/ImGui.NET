@@ -57,6 +57,22 @@ namespace CodeGenerator
             { "ImPlotTransform", "IntPtr" },
             { "ImGuiKeyChord", "ImGuiKey" },
             { "ImGuiSelectionUserData", "long" },
+            // cimgui 1.92+ value-return (_c suffix) types — map to their .NET equivalents
+            { "ImColor_c", "ImColor" },
+            { "ImVec2_c", "Vector2" },
+            { "ImVec4_c", "Vector4" },
+            { "ImTextureRef_c", "ImTextureRef" },
+            // ImFontAtlasRectId is a typedef for int
+            { "ImFontAtlasRectId", "int" },
+            // Internal opaque types referenced by public structs/functions
+            { "ImFontAtlasBuilder", "IntPtr" },
+            { "ImFontAtlasBuilder*", "IntPtr" },
+            { "ImFontLoader", "IntPtr" },
+            { "ImFontLoader*", "IntPtr" },
+            // Internal enum used in public font API; map to int to avoid a missing-type error
+            { "ImDrawTextFlags", "int" },
+            // Prevent the code generator from creating a non-existent *Ptr wrapper for this enum
+            { "ImGuiFreeTypeLoaderFlags", "ImGuiFreeTypeLoaderFlags" },
         };
         
         public static readonly List<string> WellKnownEnums = new List<string>()

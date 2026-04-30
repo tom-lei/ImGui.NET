@@ -6,13 +6,119 @@ on:
   pull_request:
     branches: [ master ]
 jobs:
-  Build_Windows:
-    runs-on: windows-latest
+  Build_Native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: win-x86
+            os: windows-latest
+            cmake-arch: Win32
+            ext: dll
+          - rid: win-x64
+            os: windows-latest
+            cmake-arch: x64
+            ext: dll
+          - rid: win-arm64
+            os: windows-latest
+            cmake-arch: ARM64
+            ext: dll
+          - rid: linux-x64
+            os: ubuntu-latest
+            ext: so
+          - rid: linux-arm64
+            os: ubuntu-24.04-arm
+            ext: so
+          - rid: osx-x64
+            os: macos-13
+            ext: dylib
+          - rid: osx-arm64
+            os: macos-14
+            ext: dylib
+    runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+
+    - name: Checkout cimgui
+      uses: actions/checkout@v4
+      with:
+        repository: cimgui/cimgui
+        path: cimgui
+        submodules: recursive
+
+    - name: Configure cimgui (Windows)
+      if: runner.os == 'Windows'
+      run: cmake -S cimgui -B cimgui-build -A ${{ matrix.cmake-arch }} -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release
+
+    - name: Configure cimgui (Unix)
+      if: runner.os != 'Windows'
+      run: cmake -S cimgui -B cimgui-build -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build cimgui
+      run: cmake --build cimgui-build --config Release
+
+    - name: Stage native binary (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $bin = Get-ChildItem -Path cimgui-build -Filter cimgui.dll -Recurse | Select-Object -First 1
+        if (-not $bin) { throw "cimgui.dll not found" }
+        New-Item -ItemType Directory -Force -Path native/${{ matrix.rid }} | Out-Null
+        Copy-Item $bin.FullName native/${{ matrix.rid }}/cimgui.dll -Force
+
+    - name: Stage native binary (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ "${{ matrix.ext }}" = "so" ]; then
+          bin="$(find cimgui-build -type f \( -name 'libcimgui.so' -o -name 'cimgui.so' \) | head -n 1)"
+          [ -n "$bin" ] || { echo "libcimgui.so/cimgui.so not found"; exit 1; }
+          mkdir -p "native/${{ matrix.rid }}"
+          cp "$bin" "native/${{ matrix.rid }}/libcimgui.so"
+        else
+          bin="$(find cimgui-build -type f \( -name 'libcimgui.dylib' -o -name 'cimgui.dylib' \) | head -n 1)"
+          [ -n "$bin" ] || { echo "libcimgui.dylib/cimgui.dylib not found"; exit 1; }
+          mkdir -p "native/${{ matrix.rid }}"
+          cp "$bin" "native/${{ matrix.rid }}/libcimgui.dylib"
+        fi
+
+    - name: Upload Native Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: native-${{ matrix.rid }}
+        path: native/${{ matrix.rid }}/*
+        if-no-files-found: error
+
+  Pack_Managed_NuGet:
+    runs-on: ubuntu-latest
+    needs: Build_Native
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Download Native Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: native-artifacts
+
+    - name: Place native binaries into deps/cimgui
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p deps/cimgui/win-x86 deps/cimgui/win-x64 deps/cimgui/win-arm64 deps/cimgui/linux-x64 deps/cimgui/linux-arm64 deps/cimgui/osx-x64 deps/cimgui/osx-arm64
+        cp native-artifacts/native-win-x86/cimgui.dll deps/cimgui/win-x86/cimgui.dll
+        cp native-artifacts/native-win-x64/cimgui.dll deps/cimgui/win-x64/cimgui.dll
+        cp native-artifacts/native-win-arm64/cimgui.dll deps/cimgui/win-arm64/cimgui.dll
+        cp native-artifacts/native-linux-x64/libcimgui.so deps/cimgui/linux-x64/cimgui.so
+        cp native-artifacts/native-linux-arm64/libcimgui.so deps/cimgui/linux-arm64/cimgui.so
+        cp native-artifacts/native-osx-x64/libcimgui.dylib deps/cimgui/osx-x64/cimgui.dylib
+        cp native-artifacts/native-osx-arm64/libcimgui.dylib deps/cimgui/osx-arm64/cimgui.dylib
 
     - name: Install .NET
       uses: actions/setup-dotnet@v4
