@@ -65,12 +65,17 @@ ImGui.NET currently provides a raw wrapper around the ImGui native API, and also
 
 # Debugging native code
 
-ImGui.NET is a wrapper over native code. By default, this native code is packaged and released in an optimized form, making debugging difficult. To obtain a debuggable version of the native code, follow these steps:
+ImGui.NET is a wrapper over native code. By default, this native code is packaged and released in an optimized form, making debugging difficult.
 
-1. Clone the [ImGui.NET-nativebuild](https://github.com/ImGuiNET/ImGui.NET-nativebuild) repo, at the tag matching the version of ImGui.NET you are using.
-2. In the ImGui.NET-nativebuild repo, run `build.cmd debug` or `build.sh debug` (depending on your platform).
-3. Copy the produced binaries (cimgui.dll, libcimgui.so, or libcimgui.dylib) into your application.
-4. Run the program under a native debugger, or enable mixed-mode debugging in Visual Studio.
+Older versions used the separate [ImGui.NET-nativebuild](https://github.com/ImGuiNET/ImGui.NET-nativebuild) release flow. Current versions in this fork build `cimgui` directly in CI (see `.github/workflows/build.yml`) and pack the resulting binaries into the NuGet package.
+
+To obtain a debuggable version of the native code for current versions:
+
+1. Build `cimgui` locally using the same CMake configure/build steps used in `.github/workflows/build.yml`.
+2. Copy the produced binaries (`cimgui.dll`, `libcimgui.so`, or `libcimgui.dylib`) into your application, or into `deps/cimgui/<rid>/` for local packaging.
+3. Run the program under a native debugger, or enable mixed-mode debugging in Visual Studio.
+
+`download-native-deps.ps1` downloads from the legacy nativebuild releases only when the requested tag exists there, and now fails fast with an explicit message when it does not.
 
 # See Also
 
